@@ -14,28 +14,28 @@ struct SoAExample {
 	std::tuple<std::vector<ValueTypes>...> values;
 };
 
-template<typename VectorType>
-void applySwaps(std::vector<VectorType>& valuesVector, const std::vector<std::pair<size_t, size_t>>& swaps)
+template<typename ElementType>
+void getSortedPositions(std::vector<size_t>& inOutPositions, const std::vector<ElementType>& keys)
 {
-	for (auto [oldI, newI] : swaps)
-	{
-		std::swap(valuesVector[oldI], valuesVector[newI]);
-	}
-}
+	inOutPositions.resize(keys.size());
+	std::iota(inOutPositions.begin(), inOutPositions.end(), 0);
 
-template<typename... ValueTypes>
-void sortSoaVariant1(SoAExample<ValueTypes...>& inOutStruct)
-{
-	std::vector<size_t> sortedPositions;
-	sortedPositions.resize(inOutStruct.keys.size());
-	std::iota(sortedPositions.begin(), sortedPositions.end(), 0);
-
-	std::sort(sortedPositions.begin(), sortedPositions.end(),
-		[&inOutStruct](size_t i, size_t j) {
-			return inOutStruct.keys[i] < inOutStruct.keys[j];
+	std::sort(inOutPositions.begin(), inOutPositions.end(),
+		[&keys](size_t i, size_t j) {
+			return keys[i] < keys[j];
 		}
 	);
+}
 
+struct Swap
+{
+	Swap(size_t pos1, size_t pos2) : pos1(pos1), pos2(pos2) {}
+	size_t pos1;
+	size_t pos2;
+};
+
+static void generateSwaps(std::vector<Swap>& swaps, const std::vector<size_t>& sortedPositions)
+{
 	// get reverse mapping
 	std::vector<size_t> reverseMapping;
 	reverseMapping.resize(sortedPositions.size());
@@ -44,7 +44,6 @@ void sortSoaVariant1(SoAExample<ValueTypes...>& inOutStruct)
 		reverseMapping[sortedPositions[i]] = i;
 	}
 
-	std::vector<std::pair<size_t, size_t>> swaps;
 	swaps.reserve(sortedPositions.size());
 
 	for (int i = 0; i < reverseMapping.size();)
@@ -61,14 +60,30 @@ void sortSoaVariant1(SoAExample<ValueTypes...>& inOutStruct)
 			++i;
 		}
 	}
+}
+
+template<typename VectorType>
+void applySwaps(std::vector<VectorType>& valuesVector, const std::vector<Swap>& swaps)
+{
+	for (auto [oldI, newI] : swaps)
+	{
+		std::swap(valuesVector[oldI], valuesVector[newI]);
+	}
+}
+
+template<typename... ValueTypes>
+void sortSoaVariant1(SoAExample<ValueTypes...>& inOutStruct)
+{
+	std::vector<size_t> sortedPositions;
+	getSortedPositions(sortedPositions, inOutStruct.keys);
+
+	std::vector<Swap> swaps;
+	generateSwaps(swaps, sortedPositions);
 
 	applySwaps(inOutStruct.keys, swaps);
 
 	std::apply(
-		[&swaps](auto&... values)
-		{
-			(applySwaps(values, swaps), ...);
-		},
+		[&swaps](auto&... values) {	(applySwaps(values, swaps), ...); },
 		inOutStruct.values
 	);
 }
