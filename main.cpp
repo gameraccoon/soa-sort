@@ -8,23 +8,31 @@ using SomeData = float;
 using SomeOtherData = float;
 using SomeThirdData = float;
 
+template <typename... ValueTypes>
 struct SoAExample {
 	std::vector<int> keys;
-	std::vector<SomeData> valuesOne;
-	std::vector<SomeOtherData> valuesTwo;
-	std::vector<SomeThirdData> valuesThree;
-	//...
+	std::tuple<std::vector<ValueTypes>...> values;
 };
 
-void sortSoa(SoAExample& soaExample)
+template<typename VectorType>
+void applySwaps(std::vector<VectorType>& valuesVector, const std::vector<std::pair<size_t, size_t>>& swaps)
+{
+	for (auto [oldI, newI] : swaps)
+	{
+		std::swap(valuesVector[oldI], valuesVector[newI]);
+	}
+}
+
+template<typename... ValueTypes>
+void sortSoaVariant1(SoAExample<ValueTypes...>& inOutStruct)
 {
 	std::vector<size_t> sortedPositions;
-	sortedPositions.resize(soaExample.keys.size());
+	sortedPositions.resize(inOutStruct.keys.size());
 	std::iota(sortedPositions.begin(), sortedPositions.end(), 0);
 
 	std::sort(sortedPositions.begin(), sortedPositions.end(),
-		[&soaExample](size_t i, size_t j) {
-			return soaExample.keys[i] < soaExample.keys[j];
+		[&inOutStruct](size_t i, size_t j) {
+			return inOutStruct.keys[i] < inOutStruct.keys[j];
 		}
 	);
 
@@ -54,52 +62,42 @@ void sortSoa(SoAExample& soaExample)
 		}
 	}
 
-	for (auto [oldI, newI] : swaps)
-	{
-		std::swap(soaExample.keys[oldI], soaExample.keys[newI]);
-	}
+	applySwaps(inOutStruct.keys, swaps);
 
-	for (auto [oldI, newI] : swaps)
-	{
-		std::swap(soaExample.valuesOne[oldI], soaExample.valuesOne[newI]);
-	}
-
-	for (auto [oldI, newI] : swaps)
-	{
-		std::swap(soaExample.valuesTwo[oldI], soaExample.valuesTwo[newI]);
-	}
-
-	for (auto [oldI, newI] : swaps)
-	{
-		std::swap(soaExample.valuesThree[oldI], soaExample.valuesThree[newI]);
-	}
+	std::apply(
+		[&swaps](auto&... values)
+		{
+			(applySwaps(values, swaps), ...);
+		},
+		inOutStruct.values
+	);
 }
 
-void fillSoa(SoAExample& soaExample)
+void fillSoa(SoAExample<float, float, float>& outSoaExample)
 {
-	soaExample.keys = {3, 0, 1, 2};
-	soaExample.valuesOne = {1.0f, 2.0f, 3.0f, 4.0f};
-	soaExample.valuesTwo = {2.0f, 3.0f, 0.0f, 1.0f};
-	soaExample.valuesThree = {-3.0f, -2.0f, -1.0f, 0.0f};
+	outSoaExample.keys = {1, 2, 3, 0};
+	std::get<0>(outSoaExample.values) = {1.0f, 2.0f, 3.0f, 4.0f};
+	std::get<1>(outSoaExample.values) = {2.0f, 3.0f, 0.0f, 1.0f};
+	std::get<2>(outSoaExample.values) = {-3.0f, -2.0f, -1.0f, 0.0f};
 }
 
-void printSoa(SoAExample& soaExample)
+void printSoa(const SoAExample<float, float, float>& soaExample)
 {
 	for (size_t i = 0; i < soaExample.keys.size(); ++i)
 	{
 		std::cout << "{key=\"" << soaExample.keys[i];
-		std::cout << "\", v1=\"" << soaExample.valuesOne[i];
-		std::cout << "\", v2=\"" << soaExample.valuesTwo[i];
-		std::cout << "\", v3=\"" << soaExample.valuesThree[i];
+		std::cout << "\", v1=\"" << std::get<0>(soaExample.values)[i];
+		std::cout << "\", v2=\"" << std::get<1>(soaExample.values)[i];
+		std::cout << "\", v3=\"" << std::get<2>(soaExample.values)[i];
 		std::cout << "\"}\n";
 	}
 }
 
 int main() {
-	SoAExample soaExample;
+	SoAExample<float, float, float> soaExample;
 	fillSoa(soaExample);
 
-	sortSoa(soaExample);
+	sortSoaVariant1(soaExample);
 
 	printSoa(soaExample);
 
