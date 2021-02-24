@@ -33,14 +33,14 @@ namespace soasort
 		// get reverse mapping
 		std::vector<size_t> reverseMapping;
 		reverseMapping.resize(sortedPositions.size());
-		for (int i = 0; i < sortedPositions.size(); ++i)
+		for (size_t i = 0; i < sortedPositions.size(); ++i)
 		{
 			reverseMapping[sortedPositions[i]] = i;
 		}
 
 		swaps.reserve(sortedPositions.size());
 
-		for (int i = 0; i < reverseMapping.size();)
+		for (size_t i = 0; i < reverseMapping.size();)
 		{
 			size_t newI = reverseMapping[i];
 			if (i != newI)
